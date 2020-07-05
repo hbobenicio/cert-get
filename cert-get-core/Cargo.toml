@@ -1,0 +1,12 @@
+[package]
+name = "cert-get-core"
+version = "0.1.0"
+authors = ["Hugo Benício <hbobenicio@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+openssl = { version = "0.10.30", features = ["vendored"] }
+openssl-probe = "0.1.2"

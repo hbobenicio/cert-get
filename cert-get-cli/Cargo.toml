@@ -1,0 +1,27 @@
+[package]
+name = "cert-get-cli"
+description = "CLI utility for downloading HTTPS servers certificates"
+version = "0.1.0"
+authors = ["Hugo Benício <hbobenicio@gmail.com>"]
+edition = "2018"
+
+[package.metadata.deb]
+maintainer = "Hugo Benício <hbobenicio@gmail.com>"
+copyright = "2020, Hugo Benício Miranda de Oliveira <hbobenicio@gmail.com>"
+license-file = ["LICENSE", "4"]
+extended-description = """\
+CLI utility for downloading HTTPS servers certificates"""
+depends = "$auto"
+section = "utility"
+priority = "optional"
+# assets = [
+#     ["target/release/cargo-deb", "usr/bin/", "755"],
+#     ["README.md", "usr/share/doc/cargo-deb/README", "644"],
+# ]
+
+[dependencies]
+log = "0.4"
+pretty_env_logger = "0.4"
+clap = "2.33"
+
+cert-get-core = { path = "../cert-get-core"}

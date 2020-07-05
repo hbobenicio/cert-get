@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "cert-get-core",
+    "cert-get-cli",
+]

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "cert-get-cli"
+		},
+		{
+			"path": "cert-get-core"
+		}
+	],
+	"settings": {}
+}
