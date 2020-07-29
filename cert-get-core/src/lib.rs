@@ -1,4 +1,5 @@
 use std::net::TcpStream;
+use std::path::{Path, PathBuf};
 
 use log::{info, error};
 use openssl::ssl::{
@@ -12,7 +13,7 @@ use openssl::stack::StackRef;
 use openssl::x509::X509;
 use openssl::nid::Nid;
 
-pub(crate) fn map_io_err(err: std::io::Error) -> String {
+pub fn map_io_err(err: std::io::Error) -> String {
     format!("io: {}", err)
 }
 
@@ -20,8 +21,7 @@ pub(crate) fn map_openssl_err(err: openssl::error::ErrorStack) -> String {
     format!("openssl: {}", err)
 }
 
-
-pub fn download_certs(url: &str, _output_dir: &str) -> Result<(), String> {
+pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P) -> Result<(), String> {
     openssl_probe::init_ssl_cert_env_vars();
 
     let mut connector_builder: SslConnectorBuilder = SslConnector::builder(SslMethod::tls())
@@ -57,25 +57,42 @@ pub fn download_certs(url: &str, _output_dir: &str) -> Result<(), String> {
             }
         };
         
-        let file_name = &format!("{:02}-{}.pem", i, common_name);
+        let file_name = &format!("{:02}-{}", i, common_name);
+
+        let mut file_path = PathBuf::new();
+        file_path.push(&output_dir);
+        file_path.push(file_name);
+        file_path.set_extension("pem");
+
+        let file_path_str = match file_path.to_str() {
+            Some(s) => s,
+            None => {
+                let err_msg = format!(
+                    "non utf-8 characters found on output file path: output_dir={:?}, file_name={}",
+                    output_dir,
+                    file_name,
+                );
+                return Err(err_msg);
+            }
+        };
         
-        if let Err(err) = save_cert(file_name, cert) {
-            error!("{}: {:?} -> {} [ERR: {}]", i, common_name, file_name, err);
+        if let Err(err) = save_cert(&file_path, cert) {
+            error!("{}: {:?} -> {} [ERR: {}]", i, common_name, file_path_str, err);
             continue;
         } else {
-            info!("{}: {:?} -> {} [OK]", i, common_name, file_name);
+            info!("{}: {:?} -> {} [OK]", i, common_name, file_path_str);
         }
     }
 
     Ok(())
 }
 
-pub fn save_cert(file_name: &str, cert: X509) -> Result<(), String> {
+pub fn save_cert<P: AsRef<Path>>(file_path: P, cert: X509) -> Result<(), String> {
     let pem_data: Vec<u8> = cert.to_pem().map_err(|openssl_error_stack| {
         format!("openssl: pem encoding: {:?}", openssl_error_stack.errors())
     })?;
 
-    std::fs::write(file_name, &pem_data).map_err(|ioerr| {
+    std::fs::write(file_path, &pem_data).map_err(|ioerr| {
         format!("fs: create/write: io: {:?}", ioerr)
     })?;
 
@@ -99,3 +116,19 @@ pub fn cert_common_name(cert: &X509) -> Result<String, String> {
 
     Err(format!("common name não encontrado"))
 }
+
+// May be useful when generating jks's
+// let status: std::process::ExitStatus = process::Command::new("python3")
+//     .env("PYTHONPATH", ".")
+//     .arg("scripts/ceph-delete-bucket.py")
+//     .arg(bucket_name)
+//     .status()
+//     .map_err(|_e: std::io::Error| "Não foi possível iniciar processo python".to_string())?;
+
+// if status.success() {
+//     Ok(())
+// } else {
+//     let error_message = String::from("Processo filho retornou com erro");
+//     error(&error_message);
+//     Err(error_message)
+// }

@@ -19,9 +19,15 @@ priority = "optional"
 #     ["README.md", "usr/share/doc/cargo-deb/README", "644"],
 # ]
 
+[[bin]]
+name = "cert-get"
+path = "src/main.rs"
+
 [dependencies]
 log = "0.4"
 pretty_env_logger = "0.4"
 clap = "2.33"
+dialoguer = "0.6"
+indicatif = "0.15"
 
 cert-get-core = { path = "../cert-get-core"}
