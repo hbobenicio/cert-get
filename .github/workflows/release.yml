@@ -26,7 +26,7 @@ jobs:
     needs: build
     steps:
     - name: Install cargo deb
-      run: cargo install deb
+      run: cargo install cargo-deb
 
     - name: Package DEB
       run: cargo deb -p cert-get-cli
