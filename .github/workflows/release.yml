@@ -1,0 +1,38 @@
+name: ci::build-test
+
+on:
+  push:
+    tags:
+      - master
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build
+      run: cargo build --verbose --release
+
+    - name: Run tests
+      run: cargo test --verbose --release
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Install cargo deb
+      run: cargo install deb
+
+    - name: Package DEB
+      run: cargo deb -p cert-get-cli
+
+    - name: Release
+      uses: actions/upload-artifact@v2
+      with:
+        name: deb
+        path: "target/debian/*.deb"
