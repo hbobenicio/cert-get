@@ -49,7 +49,7 @@ checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
 
 [[package]]
 name = "cert-get-cli"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "cert-get-core",
  "clap",
@@ -61,7 +61,7 @@ dependencies = [
 
 [[package]]
 name = "cert-get-core"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "log",
  "openssl",
