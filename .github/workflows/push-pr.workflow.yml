@@ -1,4 +1,4 @@
-name: build-test
+name: on-push-and-pull-request
 
 on: [push, pull_request]
 
@@ -6,7 +6,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2

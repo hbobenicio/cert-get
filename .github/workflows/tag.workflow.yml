@@ -1,4 +1,4 @@
-name: release
+name: on-tag
 
 on:
   push:
@@ -10,7 +10,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -21,10 +21,12 @@ jobs:
     - name: Run tests
       run: cargo test --release
 
-  release:
+  package:
     runs-on: ubuntu-latest
     needs: build
     steps:
+    - uses: actions/checkout@v2
+
     - name: Install cargo deb
       run: cargo install cargo-deb
 
