@@ -1,4 +1,5 @@
 /**/target/
+/**/.idea/
 /**/*.pem
 /**/*.crt
 /**/*.der
