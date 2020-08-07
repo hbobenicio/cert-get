@@ -36,5 +36,5 @@ jobs:
     - name: Release
       uses: actions/upload-artifact@v2
       with:
-        name: deb
+        name: cert-get-cli.zip
         path: "target/debian/*.deb"
