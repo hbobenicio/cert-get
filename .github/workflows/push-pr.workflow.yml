@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - '*'
+    tags-ignore:
+      - '*'
+  
   pull_request:
     branches:
       - '*'
-  tags-ignore:
-    - '*'
+    tags-ignore:
+      - '*'
 env:
   CARGO_TERM_COLOR: always
 
