@@ -1,5 +1,6 @@
 use log::debug;
 use cert_get_core as core;
+use crate::progress;
 
 const ARG_HELP: &'static str = "HELP";
 const ARG_BATCH: &'static str = "BATCH";
@@ -8,8 +9,12 @@ const ARG_PORT: &'static str = "PORT";
 const ARG_OUTPUT_DIR: &'static str = "OUTPUT_DIR";
 
 struct CLIContext {
+    #[allow(dead_code)]
     host: String,
+
+    #[allow(dead_code)]
     port: String,
+
     addr: String,
     output_dir: std::path::PathBuf,
 }
@@ -23,20 +28,12 @@ pub fn run() -> Result<(), String> {
         run_interactive_mode(&arg_matches)?
     };
 
-    let spinner = indicatif::ProgressBar::new_spinner();
-    spinner.enable_steady_tick(100);
-    spinner.set_message("downloading certificates...");
-    // For more spinners check out the cli-spinners project:
-    // https://github.com/sindresorhus/cli-spinners/blob/master/spinners.json
-    spinner.set_style(
-        indicatif::ProgressStyle::default_spinner()
-            .tick_strings(&["🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🎉"])
-            .template("{spinner:.blue} {msg}")
-    );
+    let spinner = progress::new_clock_spinner("downloading certificates...");
 
     core::download_certs(&cli_context.addr, &cli_context.output_dir)?;
 
     spinner.finish_with_message("done.");
+
     Ok(())
 }
 

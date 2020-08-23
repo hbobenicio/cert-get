@@ -1,7 +1,14 @@
 name: on-push-and-pull-request
 
-on: [push, pull_request]
-
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+  tags-ignore:
+    - '*'
 env:
   CARGO_TERM_COLOR: always
 

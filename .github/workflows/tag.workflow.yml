@@ -3,7 +3,6 @@ name: on-tag
 on:
   push:
     tags:
-      - master
       - "v*"
 
 env:
@@ -31,10 +30,32 @@ jobs:
       run: cargo install cargo-deb
 
     - name: Package DEB
-      run: cargo deb -p cert-get-cli
+      run: cargo deb -p cert-get-cli -o ./target/debian/cert-get-cli-${{ github.ref }}_amd64.deb
 
-    - name: Release
-      uses: actions/upload-artifact@v2
+    # https://github.com/actions/create-release
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        name: cert-get-cli.zip
-        path: "target/debian/*.deb"
+        tag_name: ${{ github.ref }}
+        release_name: Prerelease ${{ github.ref }}
+        draft: true
+        prerelease: true
+
+    # https://github.com/actions/upload-release-asset
+    - name: Upload Release Assets
+      id: upload-release-assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object,
+        # which include a `upload_url`.
+        # See this blog post for more info:
+        # https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./target/debian/cert-get-cli-${{ github.ref }}_amd64.deb
+        asset_name: cert-get-cli-${{ github.ref }}_amd64.deb
+        asset_content_type: application/zip

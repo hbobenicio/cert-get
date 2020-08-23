@@ -1,5 +1,6 @@
 use log::error;
 
+mod progress;
 mod app;
 
 fn main() {

@@ -24,12 +24,7 @@ pub(crate) fn map_openssl_err(err: openssl::error::ErrorStack) -> String {
 pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P) -> Result<(), String> {
     openssl_probe::init_ssl_cert_env_vars();
 
-    let mut connector_builder: SslConnectorBuilder = SslConnector::builder(SslMethod::tls())
-        .map_err(map_openssl_err)?;
-
-    connector_builder.set_verify(SslVerifyMode::NONE);
-
-    let connector: SslConnector = connector_builder.build();
+    let connector: SslConnector = new_insecure_ssl_connector()?;
 
     let stream: TcpStream = TcpStream::connect(&url)
         .map_err(map_io_err)?;
@@ -52,7 +47,7 @@ pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P
         let common_name = match cert_common_name(&cert) {
             Ok(cn) => cn,
             Err(err) => {
-                error!("não foi possível obter o common name do certificado: {}", err);
+                error!("it was not possible to get certificate's common name: {}", err);
                 continue;
             }
         };
@@ -79,12 +74,22 @@ pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P
         if let Err(err) = save_cert(&file_path, cert) {
             error!("{}: {:?} -> {} [ERR: {}]", i, common_name, file_path_str, err);
             continue;
-        } else {
-            info!("{}: {:?} -> {} [OK]", i, common_name, file_path_str);
         }
+
+        info!("{}: {:?} -> {} [OK]", i, common_name, file_path_str);
     }
 
     Ok(())
+}
+
+fn new_insecure_ssl_connector() -> Result<SslConnector, String> {
+    let mut connector_builder: SslConnectorBuilder = SslConnector::builder(SslMethod::tls())
+        .map_err(map_openssl_err)?;
+
+    connector_builder.set_verify(SslVerifyMode::NONE);
+    // connector_builder.set_default_verify_paths();
+
+    Ok(connector_builder.build())
 }
 
 pub fn save_cert<P: AsRef<Path>>(file_path: P, cert: X509) -> Result<(), String> {
