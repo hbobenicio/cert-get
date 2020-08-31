@@ -9,10 +9,3 @@ A CLI utility for downloading HTTPS servers certificates.
 ```
 cert-get --help
 ```
-
-## Interactive Mode
-
-```
-cert-get --interactive
-```
-
