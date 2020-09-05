@@ -1,7 +1,7 @@
 use log::error;
 
-mod progress;
 mod app;
+mod progress;
 
 fn main() {
     log_init();

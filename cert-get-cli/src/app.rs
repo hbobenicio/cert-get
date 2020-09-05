@@ -1,12 +1,12 @@
-use log::debug;
-use cert_get_core as core;
 use crate::progress;
+use cert_get_core as core;
+use log::debug;
 
-const ARG_HELP: &'static str = "HELP";
-const ARG_BATCH: &'static str = "BATCH";
-const ARG_HOST: &'static str = "HOST";
-const ARG_PORT: &'static str = "PORT";
-const ARG_OUTPUT_DIR: &'static str = "OUTPUT_DIR";
+const ARG_HELP: &str = "HELP";
+const ARG_BATCH: &str = "BATCH";
+const ARG_HOST: &str = "HOST";
+const ARG_PORT: &str = "PORT";
+const ARG_OUTPUT_DIR: &str = "OUTPUT_DIR";
 
 struct CLIContext {
     #[allow(dead_code)]
@@ -40,7 +40,10 @@ pub fn run() -> Result<(), String> {
 fn run_interactive_mode(arg_matches: &clap::ArgMatches) -> Result<CLIContext, String> {
     debug!("entering interactive mode");
 
-    let default_host = arg_matches.value_of(ARG_HOST).unwrap_or("localhost").to_string();
+    let default_host = arg_matches
+        .value_of(ARG_HOST)
+        .unwrap_or("localhost")
+        .to_string();
     let host: String = dialoguer::Input::new()
         .with_prompt("Server host/ip")
         .default(default_host)
@@ -54,7 +57,10 @@ fn run_interactive_mode(arg_matches: &clap::ArgMatches) -> Result<CLIContext, St
         .interact()
         .map_err(cert_get_core::map_io_err)?;
 
-    let default_output_dir = arg_matches.value_of(ARG_OUTPUT_DIR).unwrap_or(".").to_string();
+    let default_output_dir = arg_matches
+        .value_of(ARG_OUTPUT_DIR)
+        .unwrap_or(".")
+        .to_string();
     let output_dir: String = dialoguer::Input::new()
         .with_prompt("Output directory")
         .default(default_output_dir)
@@ -64,7 +70,12 @@ fn run_interactive_mode(arg_matches: &clap::ArgMatches) -> Result<CLIContext, St
 
     let addr = format!("{}:{}", host, port);
 
-    Ok(CLIContext { host, port, addr, output_dir })
+    Ok(CLIContext {
+        host,
+        port,
+        addr,
+        output_dir,
+    })
 }
 
 fn parse_cli_args(arg_matches: &clap::ArgMatches) -> Result<CLIContext, String> {
@@ -81,7 +92,12 @@ fn parse_cli_args(arg_matches: &clap::ArgMatches) -> Result<CLIContext, String> 
 
     let addr = format!("{}:{}", host, port);
 
-    Ok(CLIContext { host, port, addr, output_dir })
+    Ok(CLIContext {
+        host,
+        port,
+        addr,
+        output_dir,
+    })
 }
 
 fn clap_app_new<'a>() -> clap::App<'a, 'a> {
@@ -89,42 +105,47 @@ fn clap_app_new<'a>() -> clap::App<'a, 'a> {
         .version("0.1.0")
         .author("Hugo Benício Miranda de Oliveira <hbobenicio@gmail.com>")
         .about("CLI utility for downloading HTTPS servers certificates")
-        .arg(clap::Arg::with_name(ARG_HELP)
-            .help("display the help text about how this utility works")
-            .long("help")
-            .required(false)
-            .takes_value(false)
+        .arg(
+            clap::Arg::with_name(ARG_HELP)
+                .help("display the help text about how this utility works")
+                .long("help")
+                .required(false)
+                .takes_value(false),
         )
-        .arg(clap::Arg::with_name(ARG_BATCH)
-            .help("enter batch mode (non-interactive)")
-            .short("b")
-            .long("batch")
-            .required(false)
-            .takes_value(false)
+        .arg(
+            clap::Arg::with_name(ARG_BATCH)
+                .help("enter batch mode (non-interactive)")
+                .short("b")
+                .long("batch")
+                .required(false)
+                .takes_value(false),
         )
-        .arg(clap::Arg::with_name(ARG_HOST)
-            .help("Servers host/ip")
-            .short("h")
-            .long("host")
-            .required_unless(ARG_BATCH)
-            .value_name(ARG_HOST)
-            .takes_value(true)
+        .arg(
+            clap::Arg::with_name(ARG_HOST)
+                .help("Servers host/ip")
+                .short("h")
+                .long("host")
+                .required_unless(ARG_BATCH)
+                .value_name(ARG_HOST)
+                .takes_value(true),
         )
-        .arg(clap::Arg::with_name(ARG_PORT)
-            .help("Servers port")
-            .short("p")
-            .long("port")
-            .required(false)
-            .value_name(ARG_PORT)
-            .takes_value(true)
-            .default_value("443")
+        .arg(
+            clap::Arg::with_name(ARG_PORT)
+                .help("Servers port")
+                .short("p")
+                .long("port")
+                .required(false)
+                .value_name(ARG_PORT)
+                .takes_value(true)
+                .default_value("443"),
         )
-        .arg(clap::Arg::with_name(ARG_OUTPUT_DIR)
-            .help("Output directory where certificates will be saved")
-            .short("o")
-            .long("output-dir")
-            .required(false)
-            .value_name(ARG_OUTPUT_DIR)
-            .default_value(".")
+        .arg(
+            clap::Arg::with_name(ARG_OUTPUT_DIR)
+                .help("Output directory where certificates will be saved")
+                .short("o")
+                .long("output-dir")
+                .required(false)
+                .value_name(ARG_OUTPUT_DIR)
+                .default_value("."),
         )
 }

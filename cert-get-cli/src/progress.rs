@@ -5,7 +5,9 @@ pub fn new_clock_spinner(initial_message: &str) -> indicatif::ProgressBar {
     // For more spinners check out the cli-spinners project:
     // https://github.com/sindresorhus/cli-spinners/blob/master/spinners.json
     let clock_style = indicatif::ProgressStyle::default_spinner()
-        .tick_strings(&["🕛","🕐","🕑","🕒","🕓","🕔","🕕","🕖","🕗","🕘","🕙","🎉"])
+        .tick_strings(&[
+            "🕛", "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🎉",
+        ])
         .template("{spinner:.blue} {msg}");
 
     spinner.enable_steady_tick(100);

@@ -1,17 +1,11 @@
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 
-use log::{info, error};
-use openssl::ssl::{
-    SslStream,
-    SslConnector,
-    SslConnectorBuilder,
-    SslMethod,
-    SslVerifyMode,
-};
+use log::{error, info};
+use openssl::nid::Nid;
+use openssl::ssl::{SslConnector, SslConnectorBuilder, SslMethod, SslStream, SslVerifyMode};
 use openssl::stack::StackRef;
 use openssl::x509::X509;
-use openssl::nid::Nid;
 
 pub fn map_io_err(err: std::io::Error) -> String {
     format!("io: {}", err)
@@ -21,17 +15,19 @@ pub(crate) fn map_openssl_err(err: openssl::error::ErrorStack) -> String {
     format!("openssl: {}", err)
 }
 
-pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P) -> Result<(), String> {
+pub fn download_certs<P>(url: &str, output_dir: P) -> Result<(), String>
+where
+    P: AsRef<Path> + std::fmt::Debug,
+{
     openssl_probe::init_ssl_cert_env_vars();
 
     let connector: SslConnector = new_insecure_ssl_connector()?;
 
-    let stream: TcpStream = TcpStream::connect(&url)
-        .map_err(map_io_err)?;
+    let stream: TcpStream = TcpStream::connect(&url).map_err(map_io_err)?;
 
-    let stream: SslStream<TcpStream> = connector.connect(&url, stream).map_err(|openssl_err| {
-        format!("openssl: handshake: {}", openssl_err)
-    })?;
+    let stream: SslStream<TcpStream> = connector
+        .connect(&url, stream)
+        .map_err(|openssl_err| format!("openssl: handshake: {}", openssl_err))?;
 
     let maybe_certs: Option<&StackRef<X509>> = stream.ssl().peer_cert_chain();
     if maybe_certs.is_none() {
@@ -47,11 +43,14 @@ pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P
         let common_name = match cert_common_name(&cert) {
             Ok(cn) => cn,
             Err(err) => {
-                error!("it was not possible to get certificate's common name: {}", err);
+                error!(
+                    "it was not possible to get certificate's common name: {}",
+                    err
+                );
                 continue;
             }
         };
-        
+
         let file_name = &format!("{:02}-{}", i, common_name);
 
         let mut file_path = PathBuf::new();
@@ -64,15 +63,17 @@ pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P
             None => {
                 let err_msg = format!(
                     "non utf-8 characters found on output file path: output_dir={:?}, file_name={}",
-                    output_dir,
-                    file_name,
+                    output_dir, file_name,
                 );
                 return Err(err_msg);
             }
         };
-        
+
         if let Err(err) = save_cert(&file_path, cert) {
-            error!("{}: {:?} -> {} [ERR: {}]", i, common_name, file_path_str, err);
+            error!(
+                "{}: {:?} -> {} [ERR: {}]",
+                i, common_name, file_path_str, err
+            );
             continue;
         }
 
@@ -83,8 +84,8 @@ pub fn download_certs<P: AsRef<Path> + std::fmt::Debug>(url: &str, output_dir: P
 }
 
 fn new_insecure_ssl_connector() -> Result<SslConnector, String> {
-    let mut connector_builder: SslConnectorBuilder = SslConnector::builder(SslMethod::tls())
-        .map_err(map_openssl_err)?;
+    let mut connector_builder: SslConnectorBuilder =
+        SslConnector::builder(SslMethod::tls()).map_err(map_openssl_err)?;
 
     connector_builder.set_verify(SslVerifyMode::NONE);
     // connector_builder.set_default_verify_paths();
@@ -97,20 +98,19 @@ pub fn save_cert<P: AsRef<Path>>(file_path: P, cert: X509) -> Result<(), String>
         format!("openssl: pem encoding: {:?}", openssl_error_stack.errors())
     })?;
 
-    std::fs::write(file_path, &pem_data).map_err(|ioerr| {
-        format!("fs: create/write: io: {:?}", ioerr)
-    })?;
+    std::fs::write(file_path, &pem_data)
+        .map_err(|ioerr| format!("fs: create/write: io: {:?}", ioerr))?;
 
     Ok(())
 }
 
 pub fn cert_common_name(cert: &X509) -> Result<String, String> {
-
     let name_entries = cert.subject_name().entries();
     for name_entry in name_entries {
         let obj = name_entry.object();
         if obj.nid() == Nid::COMMONNAME {
-            return name_entry.data()
+            return name_entry
+                .data()
                 .as_utf8()
                 .map(|openssl_str| openssl_str.to_string())
                 .map_err(|openssl_error_stack| {
@@ -119,7 +119,7 @@ pub fn cert_common_name(cert: &X509) -> Result<String, String> {
         }
     }
 
-    Err(format!("common name não encontrado"))
+    Err(String::from("common name não encontrado"))
 }
 
 // May be useful when generating jks's
