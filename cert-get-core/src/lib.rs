@@ -5,20 +5,20 @@ use log::{error, info};
 use openssl::nid::Nid;
 use openssl::ssl::{SslConnector, SslConnectorBuilder, SslMethod, SslStream, SslVerifyMode};
 use openssl::stack::StackRef;
-use openssl::x509::X509;
+use openssl::x509::{X509, X509Ref};
 
+/// Maps an IO Error to a String error with a generic context
 pub fn map_io_err(err: std::io::Error) -> String {
     format!("io: {}", err)
 }
 
+/// Maps an OpenSSL error to a String error with a generic context
 pub(crate) fn map_openssl_err(err: openssl::error::ErrorStack) -> String {
     format!("openssl: {}", err)
 }
 
-pub fn download_certs<P>(url: &str, output_dir: P) -> Result<(), String>
-where
-    P: AsRef<Path> + std::fmt::Debug,
-{
+/// Get a vec of certificates from a https server for a given url
+pub fn get_certs(url: &str) -> Result<Vec<X509>, String> {
     openssl_probe::init_ssl_cert_env_vars();
 
     let connector: SslConnector = new_insecure_ssl_connector()?;
@@ -29,24 +29,31 @@ where
         .connect(&url, stream)
         .map_err(|openssl_err| format!("openssl: handshake: {}", openssl_err))?;
 
-    let maybe_certs: Option<&StackRef<X509>> = stream.ssl().peer_cert_chain();
-    if maybe_certs.is_none() {
-        error!("it was not possible to get certificate chain from server");
-        std::process::exit(1);
-    }
-    let cert_stack: &StackRef<X509> = maybe_certs.unwrap();
+    let cert_stack: &StackRef<X509> = stream.ssl()
+        .peer_cert_chain()
+        .ok_or(String::from("it was not possible to get certificate chain from server"))?;
 
-    info!("got {} certificate(s).", cert_stack.len());
+    let certs: Vec<X509> = cert_stack.iter()
+        .map(X509Ref::to_owned)
+        .collect();
 
-    for (i, cert) in cert_stack.iter().enumerate() {
-        let cert: X509 = cert.to_owned();
-        let common_name = match cert_common_name(&cert) {
+    Ok(certs)
+}
+
+/// Download all the certificates from a https server for a given url
+pub fn download_certs<P>(url: &str, output_dir: P) -> Result<(), String>
+where
+    P: AsRef<Path> + std::fmt::Debug,
+{
+    let certs = get_certs(url)?;
+
+    info!("got {} certificate(s).", certs.len());
+
+    for (i, cert) in certs.iter().enumerate() {
+        let common_name = match cert_common_name(cert) {
             Ok(cn) => cn,
             Err(err) => {
-                error!(
-                    "it was not possible to get certificate's common name: {}",
-                    err
-                );
+                error!("it was not possible to get certificate's common name: {}", err);
                 continue;
             }
         };
@@ -70,10 +77,7 @@ where
         };
 
         if let Err(err) = save_cert(&file_path, cert) {
-            error!(
-                "{}: {:?} -> {} [ERR: {}]",
-                i, common_name, file_path_str, err
-            );
+            error!("{}: {:?} -> {} [ERR: {}]", i, common_name, file_path_str, err);
             continue;
         }
 
@@ -93,17 +97,18 @@ fn new_insecure_ssl_connector() -> Result<SslConnector, String> {
     Ok(connector_builder.build())
 }
 
-pub fn save_cert<P: AsRef<Path>>(file_path: P, cert: X509) -> Result<(), String> {
+pub fn save_cert<P: AsRef<Path>>(file_path: P, cert: &X509) -> Result<(), String> {
     let pem_data: Vec<u8> = cert.to_pem().map_err(|openssl_error_stack| {
         format!("openssl: pem encoding: {:?}", openssl_error_stack.errors())
     })?;
 
     std::fs::write(file_path, &pem_data)
-        .map_err(|ioerr| format!("fs: create/write: io: {:?}", ioerr))?;
+        .map_err(|ioerr| format!("fs: io: {:?}", ioerr))?;
 
     Ok(())
 }
 
+// Returns the common name of the certificate
 pub fn cert_common_name(cert: &X509) -> Result<String, String> {
     let name_entries = cert.subject_name().entries();
     for name_entry in name_entries {
@@ -119,21 +124,27 @@ pub fn cert_common_name(cert: &X509) -> Result<String, String> {
         }
     }
 
-    Err(String::from("common name não encontrado"))
+    Err(String::from("common name not found"))
 }
 
-// May be useful when generating jks's
-// let status: std::process::ExitStatus = process::Command::new("python3")
-//     .env("PYTHONPATH", ".")
-//     .arg("scripts/ceph-delete-bucket.py")
-//     .arg(bucket_name)
-//     .status()
-//     .map_err(|_e: std::io::Error| "Não foi possível iniciar processo python".to_string())?;
-
-// if status.success() {
-//     Ok(())
-// } else {
-//     let error_message = String::from("Processo filho retornou com erro");
-//     error(&error_message);
-//     Err(error_message)
-// }
+/// This may be useful...
+pub fn _generate_truststore<P>(certs: &[X509], output_file_path: P, password: &str) -> Result<(), String>
+where P: AsRef<Path>
+{
+    // keytool -noprompt -import -trustcacerts -alias $ALIAS -keystore $KEYSTORE -storepass $PASSWORD
+    for cert in certs {
+        let status: std::process::ExitStatus = std::process::Command::new("keytool")
+            .arg("-noprompt")
+            .arg("-import")
+            .arg("-trustcacerts")
+            .arg("-alias").arg(cert_common_name(cert)?)
+            .arg("-keystore").arg(output_file_path.as_ref())
+            .arg("-password").arg(password)
+            .status()
+            .map_err(|err: std::io::Error| format!("it was not possible to call keytool command: io: {}", err))?;
+        if !status.success() {
+            return Err(format!("keytool failed: {:?} - {}", status.code(), status.to_string()));
+        }
+    }
+    Ok(())
+}

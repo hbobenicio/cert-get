@@ -1,6 +1,7 @@
 use crate::progress;
 use cert_get_core as core;
 use log::debug;
+use std::io::Write;
 
 const ARG_HELP: &str = "HELP";
 const ARG_BATCH: &str = "BATCH";
@@ -28,11 +29,11 @@ pub fn run() -> Result<(), String> {
         run_interactive_mode(&arg_matches)?
     };
 
-    let spinner = progress::new_clock_spinner("downloading certificates...");
+    // let spinner = progress::new_clock_spinner("downloading certificates...");
 
     core::download_certs(&cli_context.addr, &cli_context.output_dir)?;
 
-    spinner.finish_with_message("done.");
+    // spinner.finish_with_message("done.");
 
     Ok(())
 }
