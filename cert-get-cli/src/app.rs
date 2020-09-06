@@ -118,6 +118,7 @@ fn clap_app_new<'a>() -> clap::App<'a, 'a> {
                 .short("b")
                 .long("batch")
                 .required(false)
+                .requires(ARG_HOST)
                 .takes_value(false),
         )
         .arg(
@@ -125,7 +126,6 @@ fn clap_app_new<'a>() -> clap::App<'a, 'a> {
                 .help("Servers host/ip")
                 .short("h")
                 .long("host")
-                .required_unless(ARG_BATCH)
                 .value_name(ARG_HOST)
                 .takes_value(true),
         )
