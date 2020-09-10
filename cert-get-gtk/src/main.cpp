@@ -1,6 +1,11 @@
 /**
  * clang++ -Wall -std=c++17 `pkg-config --cflags gtk+-3.0` -o cert-get-gtk src/main.cpp `pkg-config --libs gtk+-3.0` -L ../target/debug/ -lcert_get_core_ffi
  * LD_LIBRARY_PATH=../target/debug ./cert-get-gtk
+ * 
+ * cd to cert-get/target/debug
+ * cmake ../../cert-get-gtk
+ * make
+ * ./cert-get-gtk
  */
 #include <gtk/gtk.h>
 
@@ -9,10 +14,6 @@ extern "C" {
 }
 
 static void activate(GtkApplication* app, gpointer user_data) {
-//    GtkWidget *window = gtk_application_window_new(app);
-//    gtk_window_set_title(GTK_WINDOW(window), "Window");
-//    gtk_window_set_default_size(GTK_WINDOW(window), 200, 200);
-//    gtk_widget_show_all(window);
     say_hello();
 
     GtkBuilder* builder = gtk_builder_new_from_file("main_dialog.glade");
@@ -26,7 +27,7 @@ static void activate(GtkApplication* app, gpointer user_data) {
 }
 
 int main(int argc, char **argv) {
-    GtkApplication *app = gtk_application_new("org.gtk.example", G_APPLICATION_FLAGS_NONE);
+    GtkApplication *app = gtk_application_new("br.com.hbobenicio.certget.gtk", G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
 
     int status = g_application_run(G_APPLICATION(app), argc, argv);
