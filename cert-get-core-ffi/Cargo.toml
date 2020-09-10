@@ -1,10 +1,11 @@
 [package]
-name = "cert-get-core"
+name = "cert-get-core-ffi"
 version = "0.1.0-alpha.1"
 authors = ["Hugo Benício <hbobenicio@gmail.com>"]
 edition = "2018"
 
+[lib]
+crate-type =["cdylib"]
+
 [dependencies]
-log = "0.4"
-openssl = { version = "0.10.30", features = ["vendored"] }
-openssl-probe = "0.1.2"
+cert-get-core = { path = "../cert-get-core"}

@@ -69,6 +69,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "cert-get-core-ffi"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "cert-get-core",
+]
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
