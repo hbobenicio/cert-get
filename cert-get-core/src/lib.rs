@@ -1,3 +1,5 @@
+//! cert-get-core is responsible for the main logic of cert-get.
+
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 
@@ -7,17 +9,17 @@ use openssl::ssl::{SslConnector, SslConnectorBuilder, SslMethod, SslStream, SslV
 use openssl::stack::StackRef;
 use openssl::x509::{X509, X509Ref};
 
-/// Maps an IO Error to a String error with a generic context
+/// Maps an IO Error to a String error with a generic context.
 pub fn map_io_err(err: std::io::Error) -> String {
     format!("io: {}", err)
 }
 
-/// Maps an OpenSSL error to a String error with a generic context
+/// Maps an OpenSSL error to a String error with a generic context.
 pub(crate) fn map_openssl_err(err: openssl::error::ErrorStack) -> String {
     format!("openssl: {}", err)
 }
 
-/// Get a vec of certificates from a https server for a given url
+/// Get a vec of certificates from a https server for a given url.
 pub fn get_certs(url: &str) -> Result<Vec<X509>, String> {
     openssl_probe::init_ssl_cert_env_vars();
 
@@ -40,7 +42,7 @@ pub fn get_certs(url: &str) -> Result<Vec<X509>, String> {
     Ok(certs)
 }
 
-/// Download all the certificates from a https server for a given url
+/// Download all certificates from a https server for a given url
 pub fn download_certs<P>(url: &str, output_dir: P) -> Result<(), String>
 where
     P: AsRef<Path> + std::fmt::Debug,
@@ -108,7 +110,7 @@ pub fn save_cert<P: AsRef<Path>>(file_path: P, cert: &X509) -> Result<(), String
     Ok(())
 }
 
-// Returns the common name of the certificate
+/// Returns the common name of the certificate
 pub fn cert_common_name(cert: &X509) -> Result<String, String> {
     let name_entries = cert.subject_name().entries();
     for name_entry in name_entries {

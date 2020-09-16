@@ -1,4 +1,4 @@
-/// new_spinner_progress_bar returns a new clock styk
+/// new_clock_spinner returns a new progress bar with a clock styling.
 pub fn new_clock_spinner(initial_message: &str) -> indicatif::ProgressBar {
     let spinner = indicatif::ProgressBar::new_spinner();
 

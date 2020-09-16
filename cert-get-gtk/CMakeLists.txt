@@ -52,15 +52,3 @@ add_custom_command(
     # DEPENDS ${destination}
     COMMENT "Copying runtime resources"
 )
-
-# pkgcfg_lib_GTK3_atk-1.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libatk-1.0.so
-# pkgcfg_lib_GTK3_cairo:FILEPATH=/usr/lib/x86_64-linux-gnu/libcairo.so
-# pkgcfg_lib_GTK3_cairo-gobject:FILEPATH=/usr/lib/x86_64-linux-gnu/libcairo-gobject.so
-# pkgcfg_lib_GTK3_gdk-3:FILEPATH=/usr/lib/x86_64-linux-gnu/libgdk-3.so
-# pkgcfg_lib_GTK3_gdk_pixbuf-2.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libgdk_pixbuf-2.0.so
-# pkgcfg_lib_GTK3_gio-2.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libgio-2.0.so
-# pkgcfg_lib_GTK3_glib-2.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libglib-2.0.so
-# pkgcfg_lib_GTK3_gobject-2.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libgobject-2.0.so
-# pkgcfg_lib_GTK3_gtk-3:FILEPATH=/usr/lib/x86_64-linux-gnu/libgtk-3.so
-# pkgcfg_lib_GTK3_pango-1.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libpango-1.0.so
-# pkgcfg_lib_GTK3_pangocairo-1.0:FILEPATH=/usr/lib/x86_64-linux-gnu/libpangocairo-1.0.so
