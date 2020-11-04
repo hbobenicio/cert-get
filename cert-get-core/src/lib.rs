@@ -1,5 +1,7 @@
 //! cert-get-core is responsible for the main logic of cert-get.
 
+pub mod error;
+
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 
@@ -9,21 +11,26 @@ use openssl::ssl::{SslConnector, SslConnectorBuilder, SslMethod, SslStream, SslV
 use openssl::stack::StackRef;
 use openssl::x509::{X509, X509Ref};
 
-/// Maps an IO Error to a String error with a generic context.
-pub fn map_io_err(err: std::io::Error) -> String {
-    format!("io: {}", err)
-}
+use crate::error::{map_io_err, map_openssl_err};
 
-/// Maps an OpenSSL error to a String error with a generic context.
-pub(crate) fn map_openssl_err(err: openssl::error::ErrorStack) -> String {
-    format!("openssl: {}", err)
+/// DownloadParams represents options for the download of server certificates
+pub struct DownloadParams {
+
+    /// address is the address of the server in the format: "HOST:PORT" or "IP:PORT"
+    pub address: String,
+
+    /// output_dir is the path where certificates will be downloaded to.
+    pub output_dir: String,
+
+    /// insecure tells to skip TLS validation
+    pub insecure: bool,
 }
 
 /// Get a vec of certificates from a https server for a given url.
-pub fn get_certs(url: &str) -> Result<Vec<X509>, String> {
+pub fn get_certs(url: &str, insecure: bool) -> Result<Vec<X509>, String> {
     openssl_probe::init_ssl_cert_env_vars();
 
-    let connector: SslConnector = new_insecure_ssl_connector()?;
+    let connector: SslConnector = new_ssl_connector(insecure)?;
 
     let stream: TcpStream = TcpStream::connect(&url).map_err(map_io_err)?;
 
@@ -42,14 +49,14 @@ pub fn get_certs(url: &str) -> Result<Vec<X509>, String> {
     Ok(certs)
 }
 
-/// Download all certificates from a https server for a given url
-pub fn download_certs<P>(url: &str, output_dir: P) -> Result<(), String>
-where
-    P: AsRef<Path> + std::fmt::Debug,
-{
-    let certs = get_certs(url)?;
+/// Download all certificates from a https server
+pub fn download_certs(params: &DownloadParams) -> Result<(), String> {
+    let output_dir = &params.output_dir;
+
+    let certs = get_certs(&params.address, params.insecure)?;
 
     info!("got {} certificate(s).", certs.len());
+    info!("downloading certificates...");
 
     for (i, cert) in certs.iter().enumerate() {
         let common_name = match cert_common_name(cert) {
@@ -71,7 +78,7 @@ where
             Some(s) => s,
             None => {
                 let err_msg = format!(
-                    "non utf-8 characters found on output file path: output_dir={:?}, file_name={}",
+                    "non utf-8 characters found on output file path: output_dir={}, file_name={}",
                     output_dir, file_name,
                 );
                 return Err(err_msg);
@@ -86,15 +93,22 @@ where
         info!("{}: {:?} -> {} [OK]", i, common_name, file_path_str);
     }
 
+    info!("generating truststore...");
+    generate_truststore(&certs, &params.output_dir, "changeit")?;
+
     Ok(())
 }
 
-fn new_insecure_ssl_connector() -> Result<SslConnector, String> {
+fn new_ssl_connector(insecure: bool) -> Result<SslConnector, String> {
     let mut connector_builder: SslConnectorBuilder =
         SslConnector::builder(SslMethod::tls()).map_err(map_openssl_err)?;
 
-    connector_builder.set_verify(SslVerifyMode::NONE);
-    // connector_builder.set_default_verify_paths();
+    if insecure {
+        connector_builder.set_verify(SslVerifyMode::NONE);
+    } else {
+        connector_builder.set_default_verify_paths();
+    }
+
 
     Ok(connector_builder.build())
 }
@@ -129,8 +143,12 @@ pub fn cert_common_name(cert: &X509) -> Result<String, String> {
     Err(String::from("common name not found"))
 }
 
+pub fn merge_certificates() {
+    unimplemented!();
+}
+
 /// This may be useful...
-pub fn _generate_truststore<P>(certs: &[X509], output_file_path: P, password: &str) -> Result<(), String>
+pub fn generate_truststore<P>(certs: &[X509], output_file_path: P, password: &str) -> Result<(), String>
 where P: AsRef<Path>
 {
     // keytool -noprompt -import -trustcacerts -alias $ALIAS -keystore $KEYSTORE -storepass $PASSWORD
@@ -141,7 +159,8 @@ where P: AsRef<Path>
             .arg("-trustcacerts")
             .arg("-alias").arg(cert_common_name(cert)?)
             .arg("-keystore").arg(output_file_path.as_ref())
-            .arg("-password").arg(password)
+            // .arg("-file").arg()
+            // .arg("-password").arg(password)
             .status()
             .map_err(|err: std::io::Error| format!("it was not possible to call keytool command: io: {}", err))?;
         if !status.success() {

@@ -1,4 +1,5 @@
 /// new_clock_spinner returns a new progress bar with a clock styling.
+#[allow(dead_code)]
 pub fn new_clock_spinner(initial_message: &str) -> indicatif::ProgressBar {
     let spinner = indicatif::ProgressBar::new_spinner();
 

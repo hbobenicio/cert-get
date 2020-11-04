@@ -1,13 +1,15 @@
 use std::ffi::CStr;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int};
 
 // TODO improve error handling (sent back to the user somehow...)
+// TODO use a Struct as the input argument
 #[no_mangle]
-pub extern "C" fn download_certs(url: *const c_char, output_dir: *const c_char) {
-    let url = unsafe { CStr::from_ptr(url) };
+pub extern "C" fn download_certs(address: *const c_char, output_dir: *const c_char, insecure: c_int) {
+    let address = unsafe { CStr::from_ptr(address) };
     let output_dir = unsafe { CStr::from_ptr(output_dir) };
+    let insecure: bool = if insecure == 1 { true } else { false };
 
-    let url_str = match url.to_str() {
+    let address_str = match address.to_str() {
         Ok(value) => value,
         Err(err) => {
             eprintln!("error: download_certs: url is not a valid utf-8 string: {}", err);
@@ -23,7 +25,13 @@ pub extern "C" fn download_certs(url: *const c_char, output_dir: *const c_char) 
         }
     };
 
-    if let Err(err) = cert_get_core::download_certs(url_str, output_dir_str) {
+    let download_params = cert_get_core::DownloadParams {
+        address: String::from(address_str),
+        output_dir: String::from(output_dir_str),
+        insecure,
+    };
+
+    if let Err(err) = cert_get_core::download_certs(&download_params) {
         eprintln!("download_certs failed: {}", err);
     };
 }
