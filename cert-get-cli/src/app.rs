@@ -1,7 +1,7 @@
 // use std::io::Write;
 
-use log::debug;
 use cert_get_core as core;
+use log::debug;
 
 // use crate::progress;
 
@@ -11,6 +11,7 @@ const ARG_HOST: &str = "HOST";
 const ARG_PORT: &str = "PORT";
 const ARG_OUTPUT_DIR: &str = "OUTPUT_DIR";
 const ARG_INSECURE: &str = "INSECURE";
+const ARG_GENERATE_TRUSTSTORE: &str = "GENERATE_TRUSTSTORE";
 
 const DEFAULT_HOST: &str = "localhost";
 const DEFAULT_PORT: &str = "443";
@@ -21,6 +22,7 @@ struct CLIContext {
     port: String,
     output_dir: String,
     insecure: bool,
+    generate_jks: bool,
 }
 
 impl CLIContext {
@@ -34,7 +36,8 @@ impl std::convert::From<&CLIContext> for core::DownloadParams {
         core::DownloadParams {
             address: cli_context.address(),
             output_dir: cli_context.output_dir.clone(),
-            insecure: cli_context.insecure
+            insecure: cli_context.insecure,
+            generate_jks: cli_context.generate_jks,
         }
     }
 }
@@ -49,9 +52,7 @@ pub fn run() -> Result<(), String> {
     };
 
     // let spinner = progress::new_clock_spinner("downloading certificates...");
-
     core::download_certs(&core::DownloadParams::from(&cli_context))?;
-
     // spinner.finish_with_message("done.");
 
     Ok(())
@@ -60,49 +61,75 @@ pub fn run() -> Result<(), String> {
 fn run_interactive_mode(arg_matches: &clap::ArgMatches) -> Result<CLIContext, String> {
     debug!("entering interactive mode");
 
-    let default_host: String = arg_matches.value_of(ARG_HOST)
-        .unwrap_or(DEFAULT_HOST)
-        .to_string();
-    let host: String = dialoguer::Input::new()
-        .with_prompt("Server host/ip")
-        .default(default_host)
-        .interact()
-        .map_err(core::error::map_io_err)?;
+    let host: String = {
+        let default_host: String = arg_matches
+            .value_of(ARG_HOST)
+            .unwrap_or(DEFAULT_HOST)
+            .to_string();
 
-    let default_port: String = arg_matches.value_of(ARG_PORT)
-        .unwrap_or(DEFAULT_PORT)
-        .to_string();
-    let port: String = dialoguer::Input::new()
-        .with_prompt("Server port")
-        .default(default_port)
-        .interact()
-        .map_err(core::error::map_io_err)?;
+        dialoguer::Input::new()
+            .with_prompt("Server host/ip")
+            .default(default_host)
+            .interact()
+            .map_err(core::error::map_io_err)?
+    };
 
-    let default_output_dir: String = arg_matches.value_of(ARG_OUTPUT_DIR)
-        .unwrap_or(DEFAULT_OUTPUT_DIR)
-        .to_string();
-    let output_dir: String = dialoguer::Input::new()
-        .with_prompt("Output directory")
-        .default(default_output_dir)
-        .interact()
-        .map_err(core::error::map_io_err)?;
-    // let output_dir = std::path::Path::new(&output_dir).to_owned();
+    let port: String = {
+        let default_port: String = arg_matches
+            .value_of(ARG_PORT)
+            .unwrap_or(DEFAULT_PORT)
+            .to_string();
 
-    let insecure_options = ["No", "Yes"];
-    let default_insecure_index: usize = if arg_matches.is_present(ARG_INSECURE) { 1 } else { 0 };
+        dialoguer::Input::new()
+            .with_prompt("Server port")
+            .default(default_port)
+            .interact()
+            .map_err(core::error::map_io_err)?
+    };
+
+    let output_dir: String = {
+        let default_output_dir: String = arg_matches
+            .value_of(ARG_OUTPUT_DIR)
+            .unwrap_or(DEFAULT_OUTPUT_DIR)
+            .to_string();
+
+        dialoguer::Input::new()
+            .with_prompt("Output directory")
+            .default(default_output_dir)
+            .interact()
+            .map_err(core::error::map_io_err)?
+    };
+
     let insecure = dialoguer::Select::new()
         .with_prompt("Skip TLS validation")
-        .items(&insecure_options)
-        .default(default_insecure_index)
+        .items(&["No (sometimes not working ATM)", "Yes"])
+        .default(if arg_matches.is_present(ARG_INSECURE) {
+            1
+        } else {
+            0
+        })
         .interact()
-        .map(|selected_index|  selected_index != 0)
+        .map(|selected_index| if selected_index == 0 { false } else { true })
+        .map_err(core::error::map_io_err)?;
+
+    let generate_jks = dialoguer::Select::new()
+        .with_prompt("Generate a JKS (Java KeyStore) file including all certificates")
+        .items(&["No", "Yes (not working ATM)"])
+        .default(if arg_matches.is_present(ARG_GENERATE_TRUSTSTORE) {
+            1
+        } else {
+            0
+        })
+        .interact()
+        .map(|selected_index| if selected_index == 0 { false } else { true })
         .map_err(core::error::map_io_err)?;
 
     Ok(CLIContext {
         host,
         port,
         output_dir,
-        insecure
+        insecure,
+        generate_jks,
     })
 }
 
@@ -118,12 +145,14 @@ fn parse_cli_args(arg_matches: &clap::ArgMatches) -> Result<CLIContext, String> 
     let output_dir = arg_matches.value_of(ARG_OUTPUT_DIR).unwrap().to_string();
     // let output_dir = std::path::Path::new(&output_dir).to_owned();
     let insecure = arg_matches.is_present(ARG_INSECURE);
+    let generate_jks = arg_matches.is_present(ARG_GENERATE_TRUSTSTORE);
 
     Ok(CLIContext {
         host,
         port,
         output_dir,
-        insecure
+        insecure,
+        generate_jks,
     })
 }
 
@@ -177,11 +206,20 @@ fn clap_app_new<'a>() -> clap::App<'a, 'a> {
         )
         .arg(
             clap::Arg::with_name(ARG_INSECURE)
-                .help("Insecure connection (skip tls validations)")
+                .help("Insecure connection (skip tls validations) (sometimes not working ATM)")
                 .short("k")
                 .long("insecure")
                 .required(false)
                 .value_name(ARG_INSECURE)
                 .takes_value(false)
+        )
+        .arg(
+            clap::Arg::with_name(ARG_GENERATE_TRUSTSTORE)
+                .help("Generate a JKS (Java KeyStore) file including all certificates from the server (not working ATM)")
+                .short("jks")
+                .long("keystore")
+                .required(false)
+                .value_name(ARG_GENERATE_TRUSTSTORE)
+                .takes_value(false),
         )
 }

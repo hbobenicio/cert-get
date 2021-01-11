@@ -12,7 +12,7 @@
 
 // TODO move this to the ffi library and expose this as a header
 extern "C" {
-    void download_certs(const char* url, const char* output_dir);
+    void download_certs(const char* url, const char* output_dir, int insecure, int generate_jks);
 }
 
 // TODO create a main_dialog class to encapsulate this
@@ -56,7 +56,7 @@ static void activate(GtkApplication* app, gpointer user_data) {
     g_signal_connect(ok_button, "clicked", G_CALLBACK(on_ok_button_clicked), nullptr);
     g_signal_connect(output_dir_file_chooser_button, "file-set", G_CALLBACK(on_output_dir_file_chooser_button_file_set), nullptr);
 
-    // TODO get rid of this warning:
+    // TODO get rid of this warning (by creating a parent main_window):
     //   "GtkDialog mapped without a transient parent. This is discouraged."
     // by creating a hidden parent main_window
     gtk_application_add_window(app, GTK_WINDOW(main_dialog));
@@ -75,7 +75,13 @@ static void on_ok_button_clicked(GtkButton* ok_button, gpointer user_data) {
 
     std::string addr = host_ip + ":" + port;
 
-    download_certs(addr.c_str(), output_dir);
+    // TODO get value from GUI
+    int insecure = 0;
+
+    // TODO get value from GUI
+    int generate_jks = 0;
+
+    download_certs(addr.c_str(), (const char*) output_dir, insecure, generate_jks);
     quit();
 }
 
